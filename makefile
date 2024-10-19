@@ -9,10 +9,10 @@ default: Hashtable.cpp
 # on Windows, use 'test0.out' instead of './test0.out'
 
 run: test0.out 
-	./test0.out 
+	test0.out 
 
 # this will delete all files with a `.out` extension in the current directory
 # on Windows, use `del` instead of `rm`
 
 clean:
-	rm *.out 
+	del *.out 
