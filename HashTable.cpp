@@ -95,7 +95,7 @@ public:
 
         int index = hash(key);
         int i = 0;
-        while (table[(index + i * i) % capacity] != -1 && !deleted[(index + i * i) % capacity]) {
+        while (table[(index + i * i) % capacity] != -1) {
             i++;
             if (i >= capacity) {
                 std::cout << "Max probing limit reached!" << endl;
