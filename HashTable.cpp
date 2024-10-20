@@ -26,7 +26,7 @@ public:
         return true;
     }
 
-    // Get the next prime number greater than n
+    
     int nextPrime(int n) {
         while (!isPrime(n)) {
             n++;
