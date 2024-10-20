@@ -1,132 +1,148 @@
 #include <iostream>
 #include <vector>
+#include <cmath>
+
+using namespace std;
+
+double LOAD_FACTOR_THRESHOLD = 0.8;
+
 
 class HashTable {
-private:
-    std::vector<int> table;
-    std::vector<bool> deleted;
-    int currentSize;
+public:
+    int* table;
+    bool* deleted;
     int capacity;
-    float loadFactorThreshold = 0.8; 
     int size;
 
     
-    int hashFunction(int key) const {
+    bool isPrime(int n) {
+        if (n <= 1) return false;
+        if (n == 2 || n == 3) return true;
+        if (n % 2 == 0 || n % 3 == 0) return false;
+        for (int i = 5; i * i <= n; i += 6) {
+            if (n % i == 0 || n % (i + 2) == 0)
+                return false;
+        }
+        return true;
+    }
+
+    // Get the next prime number greater than n
+    int nextPrime(int n) {
+        while (!isPrime(n)) {
+            n++;
+        }
+        return n;
+    }
+
+   
+    int hash(int key) {
         return key % capacity;
     }
 
-    
-    void resizeTable() {
-        int oldCapacity = capacity;
-        capacity *= 2;  
-        std::vector<int> oldTable = table;
-        std::vector<bool> oldDeleted = deleted;
+   
+    void resize() {
+        int newCapacity = nextPrime(2 * capacity);
+        int* newTable = new int[newCapacity];
+        bool* newDeleted = new bool[newCapacity];
 
-        table.clear();
-        table.resize(capacity, -1);
-        deleted.clear();
-        deleted.resize(capacity, false);
-        currentSize = 0;
+        for (int i = 0; i < newCapacity; i++) {
+            newTable[i] = -1;
+            newDeleted[i] = false;
+        }
 
-        
-        for (int i = 0; i < oldCapacity; i++) {
-            if (oldTable[i] != -1 && !oldDeleted[i]) {
-                insert(oldTable[i]);
+        for (int i = 0; i < capacity; i++) {
+            if (table[i] != -1 && !deleted[i]) {
+                int newHash = table[i] % newCapacity;
+                int j = 0;
+                while (newTable[(newHash + j * j) % newCapacity] != -1) {
+                    j++;
+                }
+                newTable[(newHash + j * j) % newCapacity] = table[i];
             }
         }
-    }
 
-    
-    int quadraticProbing(int hash, int i) const {
-        return (hash + i * i) % capacity;
+        delete[] table;
+        delete[] deleted;
+        table = newTable;
+        deleted = newDeleted;
+        capacity = newCapacity;
     }
 
 public:
-   
-    HashTable(int initialSize) : capacity(initialSize), currentSize(0) {
-        table.resize(initialSize, -1); 
-        deleted.resize(initialSize, false); 
-    }
+    
+    HashTable(int initialCapacity) {
+        capacity = nextPrime(initialCapacity);
+        table = new int[capacity];
+        deleted = new bool[capacity];
+        size = 0;
 
-   
-    void insert(int key) {
-        
-        if ((float)(currentSize + 1) / capacity > loadFactorThreshold) {
-            resizeTable();
+        for (int i = 0; i < capacity; i++) {
+            table[i] = -1;
+            deleted[i] = false;
         }
-
-        int hash = hashFunction(key);
-        int i = 0;
-        while (table[quadraticProbing(hash, i)] != -1 && !deleted[quadraticProbing(hash, i)]) {
-            i++;
-        }
-
-        table[quadraticProbing(hash, i)] = key;
-        deleted[quadraticProbing(hash, i)] = false;
-        currentSize++;
     }
 
     
-    int search(int key) {
-        int hash = hashFunction(key);
-        int i = 0;
-        while (table[quadraticProbing(hash, i)] != -1) {
-            if (table[quadraticProbing(hash, i)] == key && !deleted[quadraticProbing(hash, i)]) {
-                return quadraticProbing(hash, i);
-            }
-            i++;
+    void insert(int key) {
+        if (search(key) != -1) {
+            std::cout << "Duplicate key insertion is not allowed" << endl;
+            return;
         }
-        return -1; 
-    }
 
-   
-    void remove(int key) {
-        int hash = hashFunction(key);
+        if ((double)size / capacity >= LOAD_FACTOR_THRESHOLD) {
+            resize();
+        }
+
+        int index = hash(key);
         int i = 0;
-        while (table[quadraticProbing(hash, i)] != -1) {
-            if (table[quadraticProbing(hash, i)] == key && !deleted[quadraticProbing(hash, i)]) {
-                deleted[quadraticProbing(hash, i)] = true;
-                currentSize--;
+        while (table[(index + i * i) % capacity] != -1 && !deleted[(index + i * i) % capacity]) {
+            i++;
+            if (i >= capacity) {
+                std::cout << "Max probing limit reached!" << endl;
                 return;
             }
-            i++;
         }
+
+        table[(index + i * i) % capacity] = key;
+        deleted[(index + i * i) % capacity] = false;
+        size++;
+    }
+
+   
+    int search(int key) {
+        int index = hash(key);
+        int i = 0;
+        while (table[(index + i * i) % capacity] != -1 || deleted[(index + i * i) % capacity]) {
+            if (table[(index + i * i) % capacity] == key) {
+                return (index + i * i) % capacity;
+            }
+            i++;
+            if (i >= capacity) return -1;
+        }
+        return -1;
     }
 
     
-    void printTable() const {
-        std::cout << "HashTable: ";
+    void remove(int key) {
+        int index = search(key);
+        if (index == -1) {
+            std::cout << "Element not found" << endl;
+        } else {
+            table[index] = -1;
+            deleted[index] = true;
+            size--;
+        }
+    }
+
+  
+    void printTable() {
         for (int i = 0; i < capacity; i++) {
             if (table[i] != -1 && !deleted[i]) {
-                std::cout << table[i] << " ";
+                cout << table[i] << " ";
             } else {
-                std::cout << "_ ";
+                cout << "- ";
             }
         }
-        std::cout << std::endl;
+        cout << endl;
     }
 };
-
-int main() {
-    int initialSize = 7; 
-    HashTable ht(initialSize);
-
-    
-    ht.insert(1);
-    ht.printTable();
-    ht.insert(6);
-    ht.printTable();
-    ht.insert(15);
-    ht.printTable(); 
-    ht.insert(25);
-    ht.printTable();
-    ht.remove(15);
-    ht.printTable();
-    ht.insert(29);  
-    ht.printTable(); 
-
-    int find = ht.search(22);
-    std::cout << "Found at: " << find << std::endl;
-
-    return 0;
-}
